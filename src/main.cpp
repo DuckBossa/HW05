@@ -9,9 +9,10 @@
 const int WIDTH = 480;
 const int HEIGHT = 640;
 const int FPS = 60;
+const int NUM_BALLS = 50;
+const int RADIUS = 7;
 
 bool running = false;
-char gen = '0';
 int score = 0;
 bool hit = false;
 int time = 0;
@@ -27,71 +28,67 @@ struct particle{
 	int vx, vy;
 	int rad;
 	Uint32 color;
-	char t;
 	int dt;
 	particle(){};
-	particle(char tt, int tx, int ty, int tvx, int tvy, int trad, Uint32 tcolor): t(tt), x(tx), y(ty), vx(tvx), vy(tvy), rad(trad), color(tcolor) {}
+	particle( int tx, int ty, int tvx, int tvy, int trad, Uint32 tcolor): x(tx), y(ty), vx(tvx), vy(tvy), rad(trad), color(tcolor) {}
 
 };
 
-//create player here
-particle p1;
 vector<particle> px;
-vector<vector<particle>> sLine;
 
-bool collide(particle& bull, particle& play){
-	double radSum = bull.rad + play.rad + 0.0;
-	double xVal = (bull.x - play.x) * (bull.x - play.x) * 1.0;
-	double yVal = (bull.y - play.y) * (bull.y - play.y) * 1.0;
+bool collide(particle& ball1, particle& ball2){ // feeling ko kailangan natin sundan and elastic motion sa pagpalit ng mga velocities
+	double radSum = ball1.rad + ball2.rad + 0.0;
+	double xVal = (ball1.x - ball2.x) * (ball1.x - ball2.x) * 1.0;
+	double yVal = (ball1.y - ball2.y) * (ball1.y - ball2.y) * 1.0;
 	double dist = sqrt(xVal + yVal);
 	if(dist > radSum)
 		return false;
 	else
 		return true;
 }
-//stage generation #raffehpls
 
-
-void generatePrime(){
-		ptime = time;
+void collideWalls(particle& ball){
+	if(ball.x - ball.rad  < 0 && (ball.y - ball.rad > 0 && ball.y + ball.rad < HEIGHT)){ // make x go right
+		if(ball.vx < 0)
+			ball.vx*=-1;
+	}	
+	else if(ball.x + ball.rad  > WIDTH && (ball.y - ball.rad > 0 && ball.y + ball.rad < HEIGHT)){//make x go left
+		if(ball.vx > 0)
+			ball.vx*=-1;
+	}
+	else if( (ball.y - ball.rad < 0) && (ball.x - ball.rad > 0 && ball.x + ball.rad < WIDTH)){// make y go down
+		if(ball.vy < 0)
+			ball.vy*=-1;
+	}
+	else if( (ball.y + ball.rad > HEIGHT) && (ball.x - ball.rad > 0 && ball.x + ball.rad < WIDTH)){//make y go up
+		if(ball.vy > 0)
+			ball.vy*=-1;
+	}
+	else if( (ball.x - ball.rad < 0) && (ball.y - ball.rad < 0) ){ // make y go down and x go left
+		if(ball.vy < 0)
+			ball.vy*=-1;
+		if(ball.vx < 0)
+			ball.vx*=-1;
+	}
+	else if( (ball.x - ball.rad < 0) && (ball.y + ball.rad > HEIGHT) ){ // make y go up and x go right
+		if(ball.vy > 0)
+			ball.vy*=-1;
+		if(ball.vx < 0)
+			ball.vx*=-1;
+	}
+	else if( (ball.x + ball.rad > WIDTH) && (ball.y - ball.rad < HEIGHT) ){// make y go down and x go left
+		if(ball.vy < 0)
+			ball.vy*=-1;
+		if(ball.vx < 0)
+			ball.vx*=-1;
+	}
+	else if( (ball.x + ball.rad > WIDTH) && (ball.y + ball.rad > HEIGHT) ){//make y go up and x go left
+		if(ball.vy > 0)
+			ball.vy*=-1;
+		if(ball.vx < 0)
+			ball.vx*=-1;
+	}
 }
-
-
-void generateHBeam(int rad){
-	px.push_back(*new particle('a', 0, 0, 2, 0, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('a', 0, HEIGHT/4, 2, 0, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('a', 0, HEIGHT*1/2, 2, 0, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('a', 0, HEIGHT*3/4, 2, 0, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('a', 0, HEIGHT, 2, 0, rad, 0xFF000000));
-	px.back().dt = ptime;
-}
-
-void generateSBeam(int rad){
-	px.push_back(*new particle('b', 0, 0, 0, 2, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('b', WIDTH/4, 0, 0, 2, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('b', WIDTH*1/2, 0, 0, 2, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('b', WIDTH*3/4, 0, 0, 2, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('b', WIDTH, 0, 0, 2, rad, 0xFF000000));
-	px.back().dt = ptime;
-}
-
-
-void generateXBeam(int rad){
-	px.push_back(*new particle('x',0, 0, 2, 2, rad, 0xFF000000));
-	px.back().dt = ptime;
-	px.push_back(*new particle('y',WIDTH,0, -2, 2, rad, 0xFF000000));
-	px.back().dt = ptime;
-}
-
-
 
 bool init(){
 	bool run = true;
@@ -117,120 +114,33 @@ bool init(){
 }
 
 void setup(){
-	p1.color =  0xFFACABAA;
-	p1.x = WIDTH/2;
-	p1.y = HEIGHT/2;
-	p1.rad = 5;
-}
-
-void input(SDL_Event& ev){
-	SDL_GetMouseState(&p1.x,&p1.y);
-	while(SDL_PollEvent(&ev) != 0) {
-		if(ev.type == SDL_QUIT) running = false;
-		else if(ev.type == SDL_KEYDOWN){
-			switch(ev.key.keysym.sym){
-				case SDLK_1:
-				gen = 'b';
-				break;
-				case SDLK_2:
-				gen = '0';
-				break;
-			}
-		}
+	for(int i = 0; i < NUM_BALLS; i++){
+		//particle( int tx, int ty, int tvx, int tvy, int trad, Uint32 tcolor): x(tx), y(ty), vx(tvx), vy(tvy), rad(trad), color(tcolor) {}
+		int ranX = rand() % (WIDTH - 10)+ 10;
+		int ranY = rand() % (HEIGHT - 10) + 10;
+		int ranVX = rand() % 6 + 2;
+		int ranVY = rand() % 6 + 2;
+		px.push_back(*new particle(ranX,ranY,ranVX,ranVY,RADIUS,0xFF000000));
 	}
 }
+
 
 void physics(){
-	//cout << "Size Now is" << px.size() << " \n";
-	if(gen == '0'){
-		if(time < 10){
-			if(time % 10 == 0){
-				generatePrime();
-			}
-		}else if(time < 1100){
-			if(time % 10 == 0){
-				generateXBeam(5);
-			}
-		}
-		else if(time < 1200){}
-		else if(time < 1210){
-			if(time % 10 == 0){
-				generatePrime();
-			}
-		}else if(time < 2300){
-			if(time % 10 == 0){
-				generateHBeam(5);
-			}
-		}
-		else if( time < 2400){}
-		else if( time < 2410) {
-			if(time % 10 == 0){
-				generatePrime();
-			}
-		}
-		else if( time < 3500){
-			if ( time % 10 == 0){
-				generateSBeam(5);
-			}
-		}else if( time < 3600){}
-		else{
-			running = false;
-		}
-	}
-	
 	for(int i = 0; i < px.size(); i++){
-		if (px[i].t == 'a'){
-			px[i].vy = sin(time/20.0*1.0)*2.0+sin(px[i].dt++/20.0*M_PI)*5.0;
-		}else if(px[i].t == 'b'){
-			px[i].vx = sin(time/20.0*1.0)+sin(px[i].dt++/20.0*M_PI)*5.0;
-		}
-		else if(px[i].t == 'x'){
-			px[i].vx += sin(time/20.0*1.0)*rand()/RAND_MAX+sin(px[i].dt++/20.0*M_PI)*1.0;
-			//px[i].vy *= sin(time/20.0*M_PI)*5.0;
-		}
-		else if(px[i].t == 'y'){
-			px[i].vx -= sin(time/20.0*1.0)*rand()/RAND_MAX+sin(px[i].dt++/20.0*M_PI)*1.0;
-			//px[i].vy *= sin(px[i].dt++/20.0*M_PI)*5.0;
-		}
-	}
-
-	for(int i = 0; i < px.size(); i++){//collision detection
+		collideWalls(px[i]);
+		//check for collision with balls here
 		px[i].x += px[i].vx;
 		px[i].y += px[i].vy;
-		if(collide(p1,px[i])){
-			score++;
-			cout << "Times Hit: " << score << endl; 
-			hit = true;
-			px.erase(px.begin()+i);
-		}else if(px[i].y > HEIGHT + px[i].rad){
-			px.erase(px.begin()+i);
-		}
-		/*else if(px[i].x < -px[i].rad){
-			px.erase(px.begin()+i);
-		}*/
-		else if(px[i].x > WIDTH + px[i].rad && (px[i].t == 'a' )){
-			px.erase(px.begin()+i);
-		}
 	}
-
-	
 }
 
 void render(){
-	if(hit) SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
-	else SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
+	SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
 	SDL_RenderClear(ren);
-	if(hit) filledCircleColor(ren,p1.x,p1.y,p1.rad, 0xFFFFFFFF);
-	else filledCircleColor(ren,p1.x,p1.y,p1.rad,p1.color);
 	for(int i = 0; i < px.size(); i++){
-		//cout << i << " particle @ " << px[i].x << " " << px[i].y << endl;
-		if(hit) filledCircleColor(ren, px[i].x, px[i].y, px[i].rad, 0xFFFFFFFF);
-		else filledCircleColor(ren, px[i].x, px[i].y, px[i].rad, px[i].color);
+		filledCircleColor(ren, px[i].x, px[i].y, px[i].rad, px[i].color);
 	}
-	if(hit) hit = false;
 	SDL_RenderPresent(ren);
-	// #raffehpls
-	//cout << "SCORE: " << score << endl;
 }
 
 int main( int argc, char* args[] ){
@@ -245,13 +155,8 @@ int main( int argc, char* args[] ){
 	while (running) {
 		// time here
 		start = SDL_GetTicks();
-		input(ev);
-		//cout << "input lag: " << SDL_GetTicks()<< endl;
 		physics();
-		//cout << "phy lag: " << SDL_GetTicks()<< endl;
 		render();
-		//cout << "render lag: " << SDL_GetTicks()<< endl;
-		
 		if(1000/FPS > (SDL_GetTicks() - start)){
 			SDL_Delay(1000/FPS - (SDL_GetTicks() - start));
 		}
