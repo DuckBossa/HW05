@@ -9,7 +9,7 @@
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const int FPS = 60;
-const int NUM_BALLS = 25;
+const int NUM_BALLS = 50;
 const int RADIUS = 10;
 const int MASS = 7;
 
