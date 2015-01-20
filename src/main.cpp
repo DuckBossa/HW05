@@ -119,33 +119,34 @@ void resolveCollision2(particle& ball1, particle& ball2){
 	//getting the velocity vector is done for us.
 
 	double v1n = ball1.vx * unX + ball1.vy * unY;
-	double v1t = ball1.vx*(-1.0*unY) + ball1.vy*unX;
+	double v1t = ball1.vx*(tanx) + ball1.vy*tany;
 	double v2n = ball2.vx*unX + ball2.vy *unY;
 	double v2t = ball2.vx*(tanx) + ball2.vy*tany;
 
 	double v1pn = (v1n * (ball1.rad - ball2.rad) + ( 2*ball2.rad* v2n))/(ball1.rad + ball2.rad);
 	double v2pn= (v2n * (ball2.rad - ball1.rad) + ( 2*ball1.rad * v1n))/(ball1.rad + ball2.rad);
 
-	double vlnux1 = v1pn *unX;
-	double vlnuy1 = v1pn *unY;
-	double vltux1 = v1t * unX;
-	double vltuy1 = v1t * unY;
+	//double vlnux1 = v1pn *unX;
+	//double vlnuy1 = v1pn *unY;
+	//double vltux1 = v1t * unX;
+	//double vltuy1 = v1t * unY;
 
-	double vlnux2 = v2pn *unX;
-	double vlnuy2 = v2pn *unY;
-	double vltux2 = v2t * unX;
-	double vltuy2 = v2t * unY;
+	//double vlnux2 = v2pn *unX;
+	//double vlnuy2 = v2pn *unY;
+	//double vltux2 = v2t * unX;
+	//double vltuy2 = v2t * unY;
 
 
-	double fin1x = vlnux1 + vltux1;
-	double fin1y = vlnuy1 + vltuy1;
-	double fin2x = vlnux2 + vltux2;
-	double fin2y = vlnuy2 + vltuy2;
+	//double fin1x = vlnux1 + vltux1;
+	//double fin1y = vlnuy1 + vltuy1;
+	//double fin2x = vlnux2 + vltux2;
+	//double fin2y = vlnuy2 + vltuy2;
 
-	ball1.vx = fin1x;
-	ball1.vy = fin1y;
-	ball2.vx = fin2x;
-	ball2.vy = fin2y;
+
+	ball1.vx = v1pn*unX + v1t*unX;
+	ball1.vy = v1pn*unY + v1t*unY;
+	ball2.vx = v2pn*unX + v2t*unX;
+	ball2.vy = v2pn*unY + v2t*unY;
 
 	//ball1.x += ball1.vx;
 	//ball2.y += ball2.vy;
@@ -224,16 +225,14 @@ void collideWalls2(particle& ball){
 	if(ball.x - ball.rad <= 0){
 		if(ball.vx <= 0) ball.vx *= -1;
 		//ball.x = ball.rad;
+	}else if(ball.x + ball.rad >= WIDTH){
+		if(ball.vx >= 0) ball.vx *= -1;
+		//ball.x = WIDTH - ball.rad;
 	}
 	if(ball.y - ball.rad <= 0){
 		if(ball.vy <= 0) ball.vy *= -1;
 		//ball.y = ball.rad;
-	}
-	if(ball.x + ball.rad >= WIDTH){
-		if(ball.vx >= 0) ball.vx *= -1;
-		//ball.x = WIDTH - ball.rad;
-	}
-	if(ball.y + ball.rad >= HEIGHT){
+	}else if(ball.y + ball.rad >= HEIGHT){
 		if(ball.vy >= 0) ball.vy *= -1;
 		//ball.y = HEIGHT - ball.rad;
 	}
@@ -267,8 +266,9 @@ void setup(){
 		//particle( int tx, int ty, int tvx, int tvy, int trad, Uint32 tcolor): x(tx), y(ty), vx(tvx), vy(tvy), rad(trad), color(tcolor) {}
 		double ranX = rand() % (WIDTH - 10)+ 10;
 		double ranY = rand() % (HEIGHT - 10) + 10;
-		double ranVX = rand()/RAND_MAX * 16 - 8;
-		double ranVY = rand()/RAND_MAX * 16 - 8;
+		double ranVX = rand()*1.0/RAND_MAX * 16 - 8;
+		double ranVY = rand()*1.0/RAND_MAX * 16 - 8;
+		double varrad = rand()*1.0/RAND_MAX * 10 + 5;
 		px.push_back(*new particle(ranX,ranY,ranVX,ranVY,RADIUS,MASS,0xFF000000));
 	}
 }
