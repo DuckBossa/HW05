@@ -1,4 +1,4 @@
-
+﻿
 #include <iostream>
 #include <SDL.h>
 #include <SDL2_gfxPrimitives.h>
@@ -6,11 +6,11 @@
 //#include <cmath>
 #include <vector>
 
-const int WIDTH = 480;
-const int HEIGHT = 640;
-const int FPS = 120;
-const int NUM_BALLS = 10;
-const int RADIUS = 25;
+const int WIDTH = 800;
+const int HEIGHT = 600;
+const int FPS = 60;
+const int NUM_BALLS = 25;
+const int RADIUS = 10;
 const int MASS = 7;
 
 bool running = false;
@@ -25,24 +25,21 @@ SDL_Renderer *ren = NULL;
 using namespace std;
 
 struct particle{
-	int x, y;
-	int vx, vy;
-	int rad;
+	double x, y;
+	double vx, vy;
+	double rad;
 	Uint32 color;
 	int mass;
 	particle(){};
-	particle( int tx, int ty, int tvx, int tvy, int trad, int tmass, Uint32 tcolor): x(tx), y(ty), vx(tvx), vy(tvy), rad(trad), color(tcolor), mass(tmass) {}
+	particle( double tx, double ty, double tvx, double tvy, double trad, int tmass, Uint32 tcolor): x(tx), y(ty), vx(tvx), vy(tvy), rad(trad), color(tcolor), mass(tmass) {}
 
 };
 
 vector<particle> px;
 
 bool collide(particle& ball1, particle& ball2){ // feeling ko kailangan natin sundan and elastic motion sa pagpalit ng mga velocities
-	double radSum = ball1.rad + ball2.rad + 0.0;
-	double xVal = (ball1.x - ball2.x) * (ball1.x - ball2.x) * 1.0;
-	double yVal = (ball1.y - ball2.y) * (ball1.y - ball2.y) * 1.0;
-	double dist = sqrt(xVal + yVal);
-	if(dist > radSum)
+	double dist = sqrt((ball1.x - ball2.x) * (ball1.x - ball2.x) + (ball1.y - ball2.y) * (ball1.y - ball2.y));
+	if(dist > ball1.rad + ball2.rad)
 		return false;
 	else
 		return true;
@@ -76,7 +73,7 @@ void resolveCollision(particle& ball1, particle& ball2){
 	double nvy = vvy/dvv;
 	//dot product
 	double dotvv = nvx*nvx + nvy*nvy;
-	if(dotvv > 0.0) return;
+	//if(dotvv > 0.0) return;
 
 	double imp = dotvv/(im1+im2);
 	double ivx = dpx*imp;
@@ -89,15 +86,71 @@ void resolveCollision(particle& ball1, particle& ball2){
 }
 
 void resolveCollision2(particle& ball1, particle& ball2){
-	ball1.vx = (ball1.vx * (ball1.rad - ball2.rad ) + ( 2*ball2.rad * ball1.vx))/(ball1.rad + ball2.rad);
-	ball1.vy = (ball1.vy * (ball1.rad - ball2.rad ) + ( 2*ball2.rad * ball1.vy))/(ball1.rad + ball2.rad);
-	ball2.vx = (ball2.vx * (ball2.rad - ball1.rad ) + ( 2*ball1.rad * ball2.vx))/(ball1.rad + ball2.rad);
-	ball2.vy = (ball2.vy * (ball2.rad - ball1.rad ) + ( 2*ball1.rad * ball2.vy))/(ball1.rad + ball2.rad);
 
-	ball1.x += ball1.vx;
-	ball2.y += ball2.vy;
-	ball1.x += ball1.vx;
-	ball2.y += ball2.vy;
+	//dvx, dvy = push vector between ball1 & ball2
+	double dvx = ball1.x - ball2.x;
+	double dvy = ball1.y - ball2.y;
+	//magnitude of dv
+	double dl = sqrt(1.0*dvx*dvx+dvy*dvy);
+	//min pushback
+	double dpx = 1.0*dvx*((ball1.rad + ball2.rad-dl)/dl);
+	double dpy = 1.0*dvy*((ball1.rad + ball2.rad-dl)/dl);
+	//inverted ball mass
+	double im1 = 1.0/ball1.rad;
+	double im2 = 1.0/ball2.rad;
+	//reposition
+	ball1.x += dpx*im1/(im1+im2);
+	ball1.y += dpy*im1/(im1+im2);
+	ball2.x -= dpx*im2/(im1+im2);
+	ball2.y -= dpy*im2/(im1+im2);
+
+
+
+	double unX = ball1.x - ball2.x;
+	double unY = ball1.y - ball2.y;
+	double magN = sqrt(1.0*unX*unX + unY*unY);
+	unX /= magN;
+	unY /= magN;
+	//double dot = unX*unX + unY*unY;
+	//if (dot < 0.0) return;
+	//#2
+	double tanx = -1.0*unY;
+	double tany = unX;
+	//getting the velocity vector is done for us.
+
+	double v1n = ball1.vx * unX + ball1.vy * unY;
+	double v1t = ball1.vx*(-1.0*unY) + ball1.vy*unX;
+	double v2n = ball2.vx*unX + ball2.vy *unY;
+	double v2t = ball2.vx*(tanx) + ball2.vy*tany;
+
+	double v1pn = (v1n * (ball1.rad - ball2.rad) + ( 2*ball2.rad* v2n))/(ball1.rad + ball2.rad);
+	double v2pn= (v2n * (ball2.rad - ball1.rad) + ( 2*ball1.rad * v1n))/(ball1.rad + ball2.rad);
+
+	double vlnux1 = v1pn *unX;
+	double vlnuy1 = v1pn *unY;
+	double vltux1 = v1t * unX;
+	double vltuy1 = v1t * unY;
+
+	double vlnux2 = v2pn *unX;
+	double vlnuy2 = v2pn *unY;
+	double vltux2 = v2t * unX;
+	double vltuy2 = v2t * unY;
+
+
+	double fin1x = vlnux1 + vltux1;
+	double fin1y = vlnuy1 + vltuy1;
+	double fin2x = vlnux2 + vltux2;
+	double fin2y = vlnuy2 + vltuy2;
+
+	ball1.vx = fin1x;
+	ball1.vy = fin1y;
+	ball2.vx = fin2x;
+	ball2.vy = fin2y;
+
+	//ball1.x += ball1.vx;
+	//ball2.y += ball2.vy;
+	//ball1.x += ball1.vx;
+	//ball2.y += ball2.vy;
 }
 
 void collideWalls(particle& ball){
@@ -167,6 +220,25 @@ void collideWalls(particle& ball){
 	}
 }
 
+void collideWalls2(particle& ball){
+	if(ball.x - ball.rad <= 0){
+		if(ball.vx <= 0) ball.vx *= -1;
+		//ball.x = ball.rad;
+	}
+	if(ball.y - ball.rad <= 0){
+		if(ball.vy <= 0) ball.vy *= -1;
+		//ball.y = ball.rad;
+	}
+	if(ball.x + ball.rad >= WIDTH){
+		if(ball.vx >= 0) ball.vx *= -1;
+		//ball.x = WIDTH - ball.rad;
+	}
+	if(ball.y + ball.rad >= HEIGHT){
+		if(ball.vy >= 0) ball.vy *= -1;
+		//ball.y = HEIGHT - ball.rad;
+	}
+}
+
 bool init(){
 	bool run = true;
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -179,7 +251,7 @@ bool init(){
 		SDL_Quit();
 		run = false;
 	}
-	ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 	if (ren == nullptr){
 		SDL_DestroyWindow(win);
 		std::cout << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
@@ -193,10 +265,10 @@ bool init(){
 void setup(){
 	for(int i = 0; i < NUM_BALLS; i++){
 		//particle( int tx, int ty, int tvx, int tvy, int trad, Uint32 tcolor): x(tx), y(ty), vx(tvx), vy(tvy), rad(trad), color(tcolor) {}
-		int ranX = rand() % (WIDTH - 10)+ 10;
-		int ranY = rand() % (HEIGHT - 10) + 10;
-		int ranVX = rand() % 6 + 2;
-		int ranVY = rand() % 6 + 2;
+		double ranX = rand() % (WIDTH - 10)+ 10;
+		double ranY = rand() % (HEIGHT - 10) + 10;
+		double ranVX = rand()/RAND_MAX * 16 - 8;
+		double ranVY = rand()/RAND_MAX * 16 - 8;
 		px.push_back(*new particle(ranX,ranY,ranVX,ranVY,RADIUS,MASS,0xFF000000));
 	}
 }
@@ -204,17 +276,19 @@ void setup(){
 
 void physics(){
 	for(int i = 0; i < px.size(); i++){
-		px[i].x += px[i].vx;
-		px[i].y += px[i].vy;
-		collideWalls(px[i]);
+		
+		
 		//check for collision with balls here
 		for(int j = 0; j < px.size(); j++){
 			if(i == j) continue;
 			if(collide(px[i],px[j])){
-				resolveCollision(px[i],px[j]);
+				resolveCollision2(px[i],px[j]);
 				//cout << "COLLISION between " << i << " and " << j << endl;
 			}
 		}
+		collideWalls2(px[i]);
+		px[i].x += px[i].vx;
+		px[i].y += px[i].vy;
 		
 	}
 }
